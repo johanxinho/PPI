@@ -1,4 +1,4 @@
-name: Deploy DonayViste to GitHub Pages
+name: Deploy Dona y Viste to GitHub Pages
 
 on:
   push:
@@ -26,14 +26,14 @@ jobs:
         with:
           node-version: 22
           cache: npm
-          cache-dependency-path: 28-07/package-lock.json
+          cache-dependency-path: DONA Y VISTE/package-lock.json
       - run: npm ci
-        working-directory: 28-07
+        working-directory: DONA Y VISTE
       - run: npm run build
-        working-directory: 28-07
+        working-directory: DONA Y VISTE
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:
-          path: 28-07/dist
+          path: DONA Y VISTE/dist
       - id: deployment
         uses: actions/deploy-pages@v4
