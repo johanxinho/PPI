@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import ProductCard from '../components/ProductCard'
+import { PUBLIC_PUBLICATION_COLUMNS } from '../lib/publicationFields'
 import { supabase } from '../lib/supabaseClient'
 import '../styles/Donaciones.css'
 
@@ -16,7 +17,7 @@ export default function Donaciones() {
   const loadDonations = useCallback(async () => {
     setLoading(true)
     setError('')
-    let query = supabase.from('publicaciones').select('*').eq('tipo', 'donacion').eq('estado', 'activo').order('created_at', { ascending: false })
+    let query = supabase.from('publicaciones').select(PUBLIC_PUBLICATION_COLUMNS).eq('tipo', 'donacion').eq('estado', 'activo').order('created_at', { ascending: false })
     if (search.trim()) query = query.or(`titulo.ilike.%${search.trim()}%,descripcion.ilike.%${search.trim()}%`)
     if (size) query = query.eq('talla', size)
     if (condition) query = query.eq('condicion', condition)

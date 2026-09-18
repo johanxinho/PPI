@@ -41,10 +41,17 @@
   color: #fff;
 }
 
+.info-item a {
+  color: #fff;
+  text-underline-offset: 3px;
+}
+
 .icon {
-  width: 2rem;
-  font-size: 1.25rem;
-  text-align: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  display: grid;
+  place-items: center;
+  color: #c9df81;
 }
 
 .contacto-logo {

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
+import { PUBLIC_PUBLICATION_COLUMNS } from '../lib/publicationFields'
 import { supabase } from '../lib/supabaseClient'
 import ProductCard from '../components/ProductCard'
 import '../styles/Home.css'
@@ -9,7 +10,7 @@ export default function Home() {
   const [items, setItems] = useState([])
   const [loading, setLoading] = useState(true)
   const load = useCallback(async () => {
-    const { data, error } = await supabase.from('publicaciones').select('*').order('created_at', { ascending: false }).limit(8)
+    const { data, error } = await supabase.from('publicaciones').select(PUBLIC_PUBLICATION_COLUMNS).eq('estado', 'activo').order('created_at', { ascending: false }).limit(8)
     if (!error) setItems(data || [])
     setLoading(false)
   }, [])

@@ -5,7 +5,8 @@ export const IMAGE_BUCKET = 'uniformes'
 // Valida que los archivos subidos sean imágenes pequeñas y seguras para la aplicación.
 export function validateImage(file, maxSize = 5 * 1024 * 1024) {
   const validTypes = ['image/jpeg', 'image/png', 'image/webp']
-  if (!file || !validTypes.includes(file.type)) {
+  const extension = file?.name.split('.').pop()?.toLowerCase()
+  if (!file || !validTypes.includes(file.type) || !['jpg', 'jpeg', 'png', 'webp'].includes(extension)) {
     throw new Error('La imagen debe ser JPG, PNG o WebP.')
   }
   if (file.size > maxSize) throw new Error('La imagen no puede superar los 5 MB.')

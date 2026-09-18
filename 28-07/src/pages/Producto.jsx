@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabaseClient'
 import { getCatalogImage } from '../lib/catalogImages'
 import { removePublicationImage, uploadPublicationImage, validateImage } from '../lib/publicationService'
+import { PUBLIC_PUBLICATION_COLUMNS } from '../lib/publicationFields'
 import { useAuth } from '../lib/AuthContext'
 import '../styles/Producto.css'
 
@@ -16,28 +17,30 @@ export default function Producto() {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   const navigate = useNavigate()
-  const { user } = useAuth()
+  const { user, loading: authLoading } = useAuth()
 
-  // Obtiene desde Supabase el detalle público de una publicación.
   const fetchProducto = useCallback(async () => {
     setLoading(true); setError('')
-    const { data, error: queryError } = await supabase.from('publicaciones').select('*').eq('id', id).single()
+    const columns = user ? '*' : PUBLIC_PUBLICATION_COLUMNS
+    const { data, error: queryError } = await supabase.from('publicaciones').select(columns).eq('id', id).single()
     if (queryError) { setError(queryError.message); setLoading(false); return }
     setProducto(data); setDraft(data); setLoading(false)
-  }, [id])
+  }, [id, user])
 
   /* eslint-disable react-hooks/set-state-in-effect */
-  useEffect(() => { fetchProducto() }, [fetchProducto])
+  useEffect(() => { if (!authLoading) fetchProducto() }, [fetchProducto, authLoading])
   /* eslint-enable react-hooks/set-state-in-effect */
 
-  // Abre el medio de contacto que el propietario dejó disponible.
   function handleContact() {
-    if (!producto?.contacto) return setError('Esta publicación no tiene información de contacto.')
+    if (!user) {
+      navigate('/login')
+      return
+    }
+    if (!producto?.contacto) return setError('Esta publicación no tiene información de contacto. Inicia sesión si aún no lo has hecho.')
     const contact = producto.contacto.trim()
     window.location.href = contact.includes('@') ? `mailto:${contact}` : `tel:${contact}`
   }
 
-  // Guarda los cambios propios y reemplaza la imagen anterior de forma segura.
   async function savePublication(event) {
     event.preventDefault(); setSaving(true); setError('')
     try {
@@ -56,7 +59,6 @@ export default function Producto() {
     } catch (saveError) { setError(saveError.message) } finally { setSaving(false) }
   }
 
-  // Cambia el estado de la publicación únicamente si pertenece al usuario actual.
   async function changeStatus(estado) {
     setError('')
     const { data, error: updateError } = await supabase.from('publicaciones').update({ estado }).eq('id', producto.id).eq('usuario_id', user.id).select().single()
@@ -64,7 +66,6 @@ export default function Producto() {
     setProducto(data); setDraft(data)
   }
 
-  // Elimina la publicación propia y limpia sus imágenes de Storage.
   async function deletePublication() {
     if (!confirm('¿Estás seguro de que deseas eliminar esta publicación?')) return
     const { error: deleteError } = await supabase.from('publicaciones').delete().eq('id', producto.id).eq('usuario_id', user.id)
@@ -76,15 +77,14 @@ export default function Producto() {
     navigate('/perfil')
   }
 
-  if (loading) return <p className="loading">Cargando...</p>
+  if (authLoading || loading) return <p className="loading">Cargando...</p>
   if (!producto) return <div className="producto-detail-page"><p className="error">No se pudo cargar la publicación: {error}</p></div>
   const owner = user?.id === producto.usuario_id
-  // Actualiza un campo del formulario de edición sin perder los demás valores.
   const setField = (field, value) => setDraft({ ...draft, [field]: value })
 
   return <div className="producto-detail-page">
     <button onClick={() => navigate(-1)} className="back-btn">← Volver</button>
     {error && <div className="form-error">{error}</div>}
-    {editing ? <form onSubmit={savePublication} className="producto-detail"><div className="detail-image"><img src={producto.imagen_url || getCatalogImage(0)} alt={producto.titulo} /><input type="file" accept="image/jpeg,image/png,image/webp" onChange={event => setNewImage(event.target.files?.[0] || null)} /></div><div className="detail-info"><label>Título<input value={draft.titulo} onChange={event => setField('titulo', event.target.value)} required /></label><label>Precio<input type="number" min="0" value={draft.precio} onChange={event => setField('precio', event.target.value)} required /></label><label>Talla<input value={draft.talla} onChange={event => setField('talla', event.target.value)} required /></label><label>Categoría<input value={draft.categoria} onChange={event => setField('categoria', event.target.value)} required /></label><label>Condición<input value={draft.condicion} onChange={event => setField('condicion', event.target.value)} required /></label><label>Descripción<textarea value={draft.descripcion} onChange={event => setField('descripcion', event.target.value)} /></label><label>Contacto<input value={draft.contacto} onChange={event => setField('contacto', event.target.value)} /></label><button className="contactar-btn" disabled={saving}>{saving ? 'Guardando...' : 'Guardar cambios'}</button><button type="button" className="back-btn" onClick={() => { setDraft(producto); setNewImage(null); setEditing(false) }}>Cancelar</button></div></form> : <div className="producto-detail"><div className="detail-image"><img src={producto.imagen_url || getCatalogImage(0)} alt={producto.titulo} /></div><div className="detail-info"><h1>{producto.titulo}</h1><p className="precio">{producto.tipo === 'donacion' ? 'DONACIÓN · Gratis' : `$${Number(producto.precio || 0).toLocaleString('es-CO')}`}</p><p className="talla"><b>Talla:</b> {producto.talla || 'Por confirmar'} · <b>Estado:</b> {producto.condicion || 'Buen estado'}</p><p className="descripcion">{producto.descripcion || 'El vendedor aún no agregó una descripción.'}</p><p className="contacto"><b>Publicado por la comunidad</b><br />{producto.created_at ? new Date(producto.created_at).toLocaleDateString('es-CO') : 'Fecha no disponible'}</p>{owner ? <div className="item-actions"><button className="contactar-btn" onClick={() => setEditing(true)}>Editar</button><button className="contactar-btn" onClick={() => changeStatus(producto.estado === 'activo' ? 'pausado' : 'activo')}>{producto.estado === 'activo' ? 'Pausar' : 'Activar'}</button><button className="delete-btn" onClick={deletePublication}>Eliminar</button></div> : <button className="contactar-btn" onClick={handleContact}>Contactar vendedor</button>}</div></div>}
+    {editing ? <form onSubmit={savePublication} className="producto-detail"><div className="detail-image"><img src={producto.imagen_url || getCatalogImage(0)} alt={producto.titulo} /><input type="file" accept="image/jpeg,image/png,image/webp" onChange={event => setNewImage(event.target.files?.[0] || null)} /></div><div className="detail-info"><label>Título<input value={draft.titulo} onChange={event => setField('titulo', event.target.value)} required /></label><label>Precio<input type="number" min="0" value={draft.precio} onChange={event => setField('precio', event.target.value)} required /></label><label>Talla<input value={draft.talla} onChange={event => setField('talla', event.target.value)} required /></label><label>Categoría<input value={draft.categoria} onChange={event => setField('categoria', event.target.value)} required /></label><label>Condición<input value={draft.condicion} onChange={event => setField('condicion', event.target.value)} required /></label><label>Descripción<textarea value={draft.descripcion} onChange={event => setField('descripcion', event.target.value)} /></label><label>Contacto<input value={draft.contacto} onChange={event => setField('contacto', event.target.value)} /></label><button className="contactar-btn" disabled={saving}>{saving ? 'Guardando...' : 'Guardar cambios'}</button><button type="button" className="back-btn" onClick={() => { setDraft(producto); setNewImage(null); setEditing(false) }}>Cancelar</button></div></form> : <div className="producto-detail"><div className="detail-image"><img src={producto.imagen_url || getCatalogImage(0)} alt={producto.titulo} /></div><div className="detail-info"><h1>{producto.titulo}</h1><p className="precio">{producto.tipo === 'donacion' ? 'DONACIÓN · Gratis' : `$${Number(producto.precio || 0).toLocaleString('es-CO')}`}</p><p className="talla"><b>Talla:</b> {producto.talla || 'Por confirmar'} · <b>Estado:</b> {producto.condicion || 'Buen estado'}</p><p className="descripcion">{producto.descripcion || 'El vendedor aún no agregó una descripción.'}</p><p className="contacto"><b>Publicado por la comunidad</b><br />{producto.created_at ? new Date(producto.created_at).toLocaleDateString('es-CO') : 'Fecha no disponible'}</p>{owner ? <div className="item-actions"><button className="contactar-btn" onClick={() => setEditing(true)}>Editar</button><button className="contactar-btn" onClick={() => changeStatus(producto.estado === 'activo' ? 'pausado' : 'activo')}>{producto.estado === 'activo' ? 'Pausar' : 'Activar'}</button><button className="delete-btn" onClick={deletePublication}>Eliminar</button></div> : <button className="contactar-btn" onClick={handleContact}>{user ? 'Contactar vendedor' : 'Inicia sesión para contactar'}</button>}</div></div>}
   </div>
 }

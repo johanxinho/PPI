@@ -37,7 +37,7 @@ La base de datos debe tener aplicadas las migraciones de la carpeta `supabase/mi
 5. Abre el enlace recibido por correo para confirmar la cuenta.
 6. Regresa a **Iniciar sesión**.
 
-La contraseña debe tener al menos seis caracteres.
+La contraseña debe tener al menos diez caracteres, con mayúscula, minúscula y número.
 
 ## 3. Iniciar sesión y recuperar contraseña
 
