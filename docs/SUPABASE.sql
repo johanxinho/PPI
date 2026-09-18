@@ -6,6 +6,9 @@
 alter table public.profiles enable row level security;
 alter table public.publicaciones enable row level security;
 
+alter table public.publicaciones add column if not exists cantidad integer not null default 1;
+alter table public.publicaciones add column if not exists imagenes jsonb not null default '[]'::jsonb;
+
 drop policy if exists "Public can read publications" on public.publicaciones;
 drop policy if exists "publications_select_public" on public.publicaciones;
 drop policy if exists "Anon reads catalog without contact" on public.publicaciones;
